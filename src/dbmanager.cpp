@@ -1775,7 +1775,7 @@ void DBManager::onImportNotesRequested(const QString &fileName)
         {
             QVector<TagData> tagList;
             QSqlQuery out_qr(outside_db);
-            out_qr.prepare(R"(SELECT "id","name","color","relative_position","child_notes_count" FROM tag_table;)");
+            out_qr.prepare(R"(SELECT "id","name","color","relative_position" FROM tag_table;)");
             bool status = out_qr.exec();
             if(status) {
                 while(out_qr.next()) {
@@ -1784,7 +1784,6 @@ void DBManager::onImportNotesRequested(const QString &fileName)
                     tag.setName(out_qr.value(1).toString());
                     tag.setColor(out_qr.value(2).toString());
                     tag.setRelativePosition(out_qr.value(3).toInt());
-                    tag.setChildNotesCount(out_qr.value(4).toInt());
                     tagList.append(tag);
                 }
             } else {
@@ -1884,7 +1883,11 @@ void DBManager::onImportNotesRequested(const QString &fileName)
                             folderIdMap[id] = newId;
                         }
                     } else {
-                        auto prL = NodePath(node.absolutePath()).seperate();
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+                        auto prL = node.absolutePath().split("☃", QString::SkipEmptyParts);
+#else
+                        auto prL = node.absolutePath().split("☃", Qt::SkipEmptyParts);
+#endif
                         for (const auto& pr : QT_AS_CONST(prL)) {
                             matchFolderFunctor(pr.toInt(), matchFolderFunctor);
                         }
@@ -1955,13 +1958,9 @@ void DBManager::onImportNotesRequested(const QString &fileName)
                           R"("node_type",)"
                           R"("parent_id",)"
                           R"("relative_position",)"
-                          R"("scrollbar_position",)"
-                          R"("absolute_path", )"
-                          R"("is_pinned_note", )"
-                          R"("relative_position_an" )"
+                          R"("absolute_path" )"
                           R"(FROM node_table WHERE node_type=:node_type;)"
                         );
-
             out_qr.bindValue(":node_type", static_cast<int>(NodeData::Type::Note));
             bool status = out_qr.exec();
             QVector<NodeData> nodeList;
@@ -1986,12 +1985,7 @@ void DBManager::onImportNotesRequested(const QString &fileName)
                     node.setNodeType(static_cast<NodeData::Type>(out_qr.value(6).toInt()));
                     node.setParentId(out_qr.value(7).toInt());
                     node.setRelativePosition(out_qr.value(8).toInt());
-                    node.setScrollBarPosition(out_qr.value(9).toInt());
-                    node.setAbsolutePath(out_qr.value(10).toString());
-                    node.setIsPinnedNote(static_cast<bool>(out_qr.value(11).toInt()));
-                    node.setRelativePosAN(out_qr.value(13).toInt());
-                    node.setChildNotesCount(out_qr.value(14).toInt());
-                    node.setTagIds(getAllTagForNote(node.id()));
+                    node.setAbsolutePath(out_qr.value(9).toString());
                     nodeList.append(node);
                 }
                 m_db.transaction();
